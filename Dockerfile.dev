@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# NO usar corepack/pnpm, usar npm directamente
+COPY package*.json ./
+
+# Copiar node_modules desde HOST (instalado con npm o pnpm)
+COPY node_modules ./node_modules
+
+# Copiar configuración de Tailwind
+COPY postcss.config.js ./
+
+# Copiar código
+COPY . .
+
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
