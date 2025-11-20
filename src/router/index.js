@@ -17,21 +17,15 @@ const routes = [
         meta: { title: 'Panel Principal' }
       },
       {
-        path: '/properties',
-        name: 'Properties',
-        component: () => import('../views/Properties.vue'),
-        meta: { title: 'Inmuebles' }
-      },
-      {
-        path: '/property-treatment',  // <-- NUEVA RUTA
-        name: 'PropertyTreatment',
-        component: () => import('../views/PropertyTreatment.vue'),
+        path: '/inmueble-tratamiento',
+        name: 'InmuebleTratamiento',
+        component: () => import('../views/InmuebleTratamiento.vue'),
         meta: { title: 'Tratamiento de Inmuebles' }
       },
       {
-        path: '/documents',
-        name: 'Documents',
-        component: () => import('../views/Documents.vue'),
+        path: '/documentos',
+        name: 'Documentos',
+        component: () => import('../views/Documentos.vue'),
         meta: { title: 'Documentación' }
       },
       {
@@ -41,9 +35,9 @@ const routes = [
         meta: { title: 'Configuración' },
         children: [
           {
-            path: 'catalogs',
-            name: 'ConfigCatalogs',
-            component: () => import('../views/ConfigCatalogs.vue'),
+            path: 'catalogos',
+            name: 'ConfigCatalogos',
+            component: () => import('../views/ConfigCatalogos.vue'),
             meta: { title: 'Gestión de Catálogos' }
           }
         ]

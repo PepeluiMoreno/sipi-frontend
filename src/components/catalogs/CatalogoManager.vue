@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white rounded-lg shadow">
-    <!-- Header con botón AÑADIR -->
+    <!-- Header -->
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
       <h2 class="text-lg font-semibold text-gray-900">{{ title }}</h2>
       <button 
@@ -12,13 +12,11 @@
       </button>
     </div>
 
-    <!-- Formulario (aparece encima de la tabla) -->
+    <!-- Formulario -->
     <div v-if="showForm" class="px-6 py-4 border-b border-gray-200 bg-gray-50">
       <form @submit.prevent="saveItem" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-for="field in formFields" :key="field.key">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            {{ field.label }}
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
           <input 
             v-if="field.type === 'text'"
             v-model="formData[field.key]"
@@ -32,15 +30,6 @@
             rows="2"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg"
           ></textarea>
-          <select
-            v-else-if="field.type === 'select'"
-            v-model="formData[field.key]"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          >
-            <option v-for="option in field.options" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
         </div>
         <div class="flex items-end space-x-2 md:col-span-3">
           <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
@@ -53,13 +42,12 @@
       </form>
     </div>
 
-    <!-- Tabla con datos -->
+    <!-- Tabla -->
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
-            <th v-for="field in displayFields" :key="field.key" 
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+            <th v-for="field in displayFields" :key="field.key" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
               {{ field.label }}
             </th>
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
@@ -103,7 +91,6 @@ import { PlusIcon, PencilIcon, TrashIcon, InboxIcon } from '@heroicons/vue/24/ou
 const props = defineProps({
   title: String,
   singularTitle: String,
-  apiEndpoint: String,
   displayFields: Array,
   formFields: Array
 })
@@ -114,10 +101,9 @@ const isEditing = ref(false)
 const formData = ref({})
 
 const loadItems = async () => {
-  // Mock data
   items.value = [
-    { id: '1', nombre: 'Registro 1', descripcion: 'Descripción del registro 1', tipo_mime: 'application/pdf', extension: 'pdf' },
-    { id: '2', nombre: 'Registro 2', descripcion: 'Descripción del registro 2', tipo_mime: 'image/jpeg', extension: 'jpg' }
+    { id: '1', nombre: 'Ejemplo 1', descripcion: 'Descripción 1', tipo_mime: 'text/plain', extension: 'txt' },
+    { id: '2', nombre: 'Ejemplo 2', descripcion: 'Descripción 2', tipo_mime: 'application/pdf', extension: 'pdf' }
   ]
 }
 
@@ -129,8 +115,6 @@ const openForm = () => {
   isEditing.value = false
   formData.value = {}
   showForm.value = true
-  // Scroll top para ver el formulario
-  document.querySelector('.overflow-y-auto').scrollTop = 0
 }
 
 const editItem = (item) => {

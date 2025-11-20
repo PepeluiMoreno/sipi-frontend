@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
       <div class="flex items-center justify-between px-6 py-4">
-        <!-- Logo y título -->
+        <!-- Logo -->
         <div class="flex items-center space-x-4">
           <button @click="toggleSidebar" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
             <Bars3Icon class="w-6 h-6 text-gray-600" />
@@ -14,27 +14,13 @@
           </div>
         </div>
 
-        <!-- Search -->
-        <div class="hidden md:flex flex-1 max-w-md mx-8">
-          <div class="relative w-full">
-            <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar inmuebles, documentos..."
-              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-        </div>
-
         <!-- User menu -->
         <div class="flex items-center space-x-4">
-          <!-- Notifications -->
           <button class="relative p-2 rounded-lg hover:bg-gray-100">
             <BellIcon class="w-6 h-6 text-gray-600" />
             <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
 
-          <!-- User avatar -->
           <div class="relative">
             <button @click="toggleUserMenu" class="flex items-center space-x-3">
               <img :src="authStore.user.avatar" alt="Avatar" class="w-10 h-10 rounded-full" />
@@ -45,16 +31,11 @@
               <ChevronDownIcon class="w-4 h-4 text-gray-600" />
             </button>
 
-            <!-- Dropdown -->
             <div v-if="showUserMenu" class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
               <div class="px-4 py-2 border-b border-gray-100">
                 <p class="text-sm font-medium text-gray-900">{{ authStore.user.name }}</p>
                 <p class="text-xs text-gray-500">{{ authStore.user.email }}</p>
               </div>
-              <router-link to="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                <UserIcon class="w-4 h-4 inline mr-2" />
-                Mi Perfil
-              </router-link>
               <button @click="logout" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">
                 <ArrowLeftOnRectangleIcon class="w-4 h-4 inline mr-2" />
                 Cerrar Sesión
@@ -86,7 +67,7 @@
       </nav>
     </aside>
 
-    <!-- Backdrop para móvil -->
+    <!-- Backdrop móvil -->
     <div 
       v-if="sidebarOpen && isMobile" 
       class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
@@ -99,21 +80,11 @@
         <!-- Breadcrumb -->
         <nav class="flex mb-6" aria-label="Breadcrumb">
           <ol class="flex items-center space-x-2">
-            <li>
-              <div class="flex items-center">
-                <HomeIcon class="w-4 h-4 text-gray-400" />
-              </div>
-            </li>
-            <li>
-              <div class="flex items-center">
-                <ChevronRightIcon class="w-4 h-4 text-gray-400" />
-                <span class="ml-2 text-sm font-medium text-gray-500">{{ $route.meta.title }}</span>
-              </div>
-            </li>
+            <li><ChevronRightIcon class="w-4 h-4 text-gray-400" /></li>
+            <li><span class="text-sm font-medium text-gray-500">{{ $route.meta.title }}</span></li>
           </ol>
         </nav>
 
-        <!-- Page content -->
         <router-view />
       </div>
     </main>
@@ -121,8 +92,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import {
   HomeIcon,
@@ -131,52 +101,36 @@ import {
   CogIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  MagnifyingGlassIcon,
   BellIcon,
   ChevronDownIcon,
-  UserIcon,
   ChevronRightIcon
 } from '@heroicons/vue/24/outline'
 
-const router = useRouter()
 const authStore = useAuthStore()
-
 const sidebarOpen = ref(false)
 const showUserMenu = ref(false)
 const isMobile = ref(window.innerWidth < 1024)
 
 const navigation = [
   { name: 'Dashboard', path: '/dashboard', icon: HomeIcon },
-  { name: 'Inmuebles', path: '/property-treatment', icon: BuildingOfficeIcon }, // <-- Cambia /properties por /property-treatment
-  { name: 'Documentación', path: '/documents', icon: DocumentTextIcon },
+  { name: 'Inmuebles', path: '/inmueble-tratamiento', icon: BuildingOfficeIcon },
+  { name: 'Documentos', path: '/documentos', icon: DocumentTextIcon },
   { name: 'Configuración', path: '/config', icon: CogIcon }
 ]
-const toggleSidebar = () => {
-  sidebarOpen.value = !sidebarOpen.value
-}
 
-const toggleUserMenu = () => {
-  showUserMenu.value = !showUserMenu.value
-}
+const toggleSidebar = () => sidebarOpen.value = !sidebarOpen.value
+const toggleUserMenu = () => showUserMenu.value = !showUserMenu.value
 
 const logout = () => {
   authStore.logout()
   showUserMenu.value = false
-  // router.push('/login')
 }
 
 const handleResize = () => {
   isMobile.value = window.innerWidth < 1024
-  if (!isMobile.value) {
-    sidebarOpen.value = false
-  }
+  if (!isMobile.value) sidebarOpen.value = false
 }
 
-onMounted(() => {
-  window.addEventListener('resize', handleResize)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-})
+onMounted(() => window.addEventListener('resize', handleResize))
+onUnmounted(() => window.removeEventListener('resize', handleResize))
 </script>
