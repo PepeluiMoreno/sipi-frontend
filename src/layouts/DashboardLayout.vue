@@ -147,11 +147,10 @@ const isMobile = ref(window.innerWidth < 1024)
 
 const navigation = [
   { name: 'Dashboard', path: '/dashboard', icon: HomeIcon },
-  { name: 'Inmuebles', path: '/properties', icon: BuildingOfficeIcon },
+  { name: 'Inmuebles', path: '/property-treatment', icon: BuildingOfficeIcon }, // <-- Cambia /properties por /property-treatment
   { name: 'Documentación', path: '/documents', icon: DocumentTextIcon },
   { name: 'Configuración', path: '/config', icon: CogIcon }
 ]
-
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
 }

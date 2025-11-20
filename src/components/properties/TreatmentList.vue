@@ -55,5 +55,4 @@
       </div>
     </div>
 
-    <!-- Footer con acción -->
-    <div v-if
+ 

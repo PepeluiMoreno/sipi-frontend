@@ -23,6 +23,12 @@ const routes = [
         meta: { title: 'Inmuebles' }
       },
       {
+        path: '/property-treatment',  // <-- NUEVA RUTA
+        name: 'PropertyTreatment',
+        component: () => import('../views/PropertyTreatment.vue'),
+        meta: { title: 'Tratamiento de Inmuebles' }
+      },
+      {
         path: '/documents',
         name: 'Documents',
         component: () => import('../views/Documents.vue'),
