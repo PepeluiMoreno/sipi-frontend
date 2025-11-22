@@ -1,8 +1,9 @@
+<!-- src/modules/core/views/Dashboard.vue -->
 <template>
   <div>
     <!-- Welcome banner -->
     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 mb-6 text-white">
-      <h2 class="text-2xl font-bold mb-2">Bienvenido, {{ authStore.user.name }}</h2>
+      <h2 class="text-2xl font-bold mb-2">Bienvenido, {{ user?.name || 'Usuario' }}</h2>
       <p class="text-indigo-100">Panel de Control del Patrimonio Inmueble</p>
     </div>
 
@@ -53,13 +54,26 @@
           </div>
         </div>
       </div>
+
+      <!-- Actividad reciente -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200">
+          <h3 class="font-semibold text-gray-900">Actividad Reciente</h3>
+        </div>
+        <div class="p-6">
+          <div class="text-center text-gray-500 py-8">
+            <p>No hay actividad reciente</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useAuthStore } from '../../../stores/auth'
+// Importación CORREGIDA - core está dentro de modules
+import { useAuthStore } from '../stores/auth'
 import {
   BuildingOfficeIcon,
   HomeIcon,
@@ -68,7 +82,10 @@ import {
   CheckCircleIcon
 } from '@heroicons/vue/24/outline'
 
+// Usar el store de auth
 const authStore = useAuthStore()
+const user = ref(authStore.user || { name: 'Usuario' })
+
 const stats = ref({
   inmuebles_detectados: 0,
   inmatriculados: 0,
@@ -76,43 +93,29 @@ const stats = ref({
   en_venta: 0,
   vendidos: 0
 })
+
 const ultimosInmuebles = ref([])
 
 const loadDashboardData = async () => {
   try {
-    // TODO: Implementar query Apollo/GraphQL para estadísticas
-    /*
-    const { data } = await apolloClient.query({
-      query: gql`
-        query GetDashboardStats {
-          dashboardStats {
-            inmuebles_detectados
-            inmatriculados
-            bics_catalogados
-            en_venta
-            vendidos
-          }
-          ultimosInmuebles {
-            id
-            direccion
-            estado
-          }
-        }
-      `
-    })
-    stats.value = data.dashboardStats
-    ultimosInmuebles.value = data.ultimosInmuebles
-    */
-    
-    // Mock temporal
-    stats.value = {
-      inmuebles_detectados: 0,
-      inmatriculados: 0,
-      bics_catalogados: 0,
-      en_venta: 0,
-      vendidos: 0
+    // En desarrollo, usar mock data
+    if (import.meta.env.DEV) {
+      stats.value = {
+        inmuebles_detectados: 156,
+        inmatriculados: 89,
+        bics_catalogados: 23,
+        en_venta: 12,
+        vendidos: 45
+      }
+      ultimosInmuebles.value = [
+        { id: '1', direccion: 'Calle Mayor 123, Madrid', estado: 'Inmatriculado' },
+        { id: '2', direccion: 'Plaza de la Catedral, Toledo', estado: 'BIC Catalogado' },
+        { id: '3', direccion: 'Avenida Constitución, Sevilla', estado: 'En Venta' }
+      ]
+      return
     }
-    ultimosInmuebles.value = []
+    
+    // TODO: Implementar query Apollo/GraphQL para estadísticas
   } catch (error) {
     console.error('Error cargando datos del dashboard:', error)
   }

@@ -1,330 +1,480 @@
 <template>
-  <div class="bg-white rounded-lg shadow">
-    <!-- Header -->
-    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-      <div>
-        <h2 class="text-lg font-semibold text-gray-900">{{ title }}</h2>
-        <p v-if="description" class="text-sm text-gray-500 mt-1">{{ description }}</p>
+  <div class="catalogo-manager">
+    <!-- Header del catálogo -->
+    <div class="mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-semibold text-gray-900">{{ catalogoConfig.nombre }}</h2>
+          <p class="text-sm text-gray-600">{{ catalogoConfig.descripcion }}</p>
+        </div>
+        <div class="flex space-x-3">
+          <button
+            @click="exportarDatos"
+            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center text-sm"
+          >
+            <ArrowDownTrayIcon class="w-4 h-4 mr-2" />
+            Exportar
+          </button>
+          <button
+            @click="$emit('nuevo-item')"
+            class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center text-sm"
+          >
+            <PlusIcon class="w-4 h-4 mr-2" />
+            Nuevo {{ catalogoConfig.singular }}
+          </button>
+        </div>
       </div>
-      <button 
-        @click="openForm()"
-        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center"
-      >
-        <PlusIcon class="w-4 h-4 mr-2" />
-        Añadir {{ singularTitle }}
-      </button>
     </div>
 
-    <!-- Formulario -->
-    <div v-if="showForm" class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-      <form @submit.prevent="saveItem" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="field in formFields" :key="field.key" :class="field.fullWidth ? 'md:col-span-2 lg:col-span-3' : ''">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}
-            <span v-if="field.required" class="text-red-500">*</span>
-          </label>
-          
-          <!-- Input de texto -->
-          <input 
-            v-if="field.type === 'text' || field.type === 'url'"
-            v-model="formData[field.key]"
-            :type="field.type"
-            :maxlength="field.maxLength"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-            :required="field.required"
-            :placeholder="field.placeholder"
-          />
-          
-          <!-- Textarea -->
-          <textarea
-            v-else-if="field.type === 'textarea'"
-            v-model="formData[field.key]"
-            :rows="field.rows || 3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-            :required="field.required"
-            :placeholder="field.placeholder"
-          ></textarea>
-          
-          <!-- Checkbox -->
-          <div v-else-if="field.type === 'checkbox'" class="flex items-center mt-2">
+    <!-- Búsqueda y filtros -->
+    <div class="mb-6 bg-white p-4 rounded-lg shadow-sm border">
+      <div class="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+        <div class="flex-1">
+          <div class="relative">
             <input
-              v-model="formData[field.key]"
-              type="checkbox"
-              class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              v-model="searchQuery"
+              type="text"
+              :placeholder="`Buscar ${catalogoConfig.plural}...`"
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             />
-            <span class="ml-2 text-sm text-gray-700">{{ field.label }}</span>
+            <MagnifyingGlassIcon class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
           </div>
-          
-          <!-- Select -->
-          <select
-            v-else-if="field.type === 'select'"
-            v-model="formData[field.key]"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-            :required="field.required"
-          >
-            <option value="">Seleccionar...</option>
-            <option v-for="option in field.options" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-          
-          <!-- Número -->
-          <input
-            v-else-if="field.type === 'number'"
-            v-model.number="formData[field.key]"
-            type="number"
-            :min="field.min"
-            :max="field.max"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-            :required="field.required"
-          />
         </div>
         
-        <div class="flex items-end space-x-2 md:col-span-3">
-          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-            {{ isEditing ? 'Actualizar' : 'Guardar' }}
-          </button>
-          <button type="button" @click="closeForm" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
-            Cancelar
-          </button>
+        <div class="flex space-x-4">
+          <select
+            v-model="filters.estado"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+          >
+            <option value="">Todos los estados</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+          
+          <select
+            v-model="itemsPorPagina"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+          >
+            <option value="10">10 por página</option>
+            <option value="25">25 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+          </select>
         </div>
-      </form>
+      </div>
     </div>
 
-    <!-- Tabla -->
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th v-for="field in displayFields" :key="field.key" 
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {{ field.label }}
-            </th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="item in items" :key="item.id" class="hover:bg-gray-50">
-            <td v-for="field in displayFields" :key="field.key" class="px-6 py-4 text-sm text-gray-900">
-              <template v-if="field.type === 'boolean'">
-                <span :class="getNestedValue(item, field.key) ? 'text-green-600' : 'text-red-600'">
-                  {{ getNestedValue(item, field.key) ? 'Sí' : 'No' }}
-                </span>
-              </template>
-              <template v-else-if="field.type === 'badge'">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  {{ getNestedValue(item, field.key) }}
-                </span>
-              </template>
-              <template v-else-if="field.type === 'url' && getNestedValue(item, field.key)">
-                <a :href="getNestedValue(item, field.key)" target="_blank" class="text-indigo-600 hover:text-indigo-900 truncate block max-w-xs">
-                  {{ field.truncate ? truncateUrl(getNestedValue(item, field.key)) : getNestedValue(item, field.key) }}
-                </a>
-              </template>
-              <template v-else>
-                {{ truncateText(getNestedValue(item, field.key), field.truncate) }}
-              </template>
-            </td>
-            <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-              <button @click="editItem(item)" class="text-indigo-600 hover:text-indigo-900 p-1" title="Editar">
-                <PencilIcon class="w-4 h-4" />
-              </button>
-              <button @click="deleteItem(item)" class="text-red-600 hover:text-red-900 p-1" title="Eliminar">
-                <TrashIcon class="w-4 h-4" />
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Estadísticas rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white p-4 rounded-lg shadow-sm border">
+        <p class="text-sm font-medium text-gray-600">Total</p>
+        <p class="text-2xl font-bold text-gray-900">{{ items.length }}</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-sm border">
+        <p class="text-sm font-medium text-gray-600">Activos</p>
+        <p class="text-2xl font-bold text-green-600">{{ itemsActivos }}</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-sm border">
+        <p class="text-sm font-medium text-gray-600">Inactivos</p>
+        <p class="text-2xl font-bold text-red-600">{{ itemsInactivos }}</p>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-sm border">
+        <p class="text-sm font-medium text-gray-600">Filtrados</p>
+        <p class="text-2xl font-bold text-indigo-600">{{ itemsFiltrados.length }}</p>
+      </div>
     </div>
 
-    <!-- Estado vacío -->
-    <div v-if="items.length === 0 && !loading" class="text-center py-12">
-      <InboxIcon class="w-12 h-12 text-gray-400 mx-auto mb-4" />
-      <p class="text-gray-500">No hay registros en este catálogo</p>
-      <button @click="openForm()" class="mt-4 text-indigo-600 hover:text-indigo-700 text-sm font-medium">
-        Añadir el primer registro
-      </button>
-    </div>
+    <!-- Tabla de items -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th 
+                v-for="columna in columnas" 
+                :key="columna.key"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                @click="ordenarPor(columna.key)"
+              >
+                <div class="flex items-center">
+                  {{ columna.label }}
+                  <ChevronUpDownIcon 
+                    v-if="orden.columna === columna.key"
+                    class="w-4 h-4 ml-1"
+                    :class="orden.direccion === 'asc' ? 'text-indigo-600' : 'text-gray-400'"
+                  />
+                </div>
+              </th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr 
+              v-for="item in itemsPaginados" 
+              :key="item.id"
+              class="hover:bg-gray-50 transition-colors"
+            >
+              <td 
+                v-for="columna in columnas" 
+                :key="columna.key"
+                class="px-6 py-4 whitespace-nowrap text-sm"
+                :class="getCellClass(item, columna.key)"
+              >
+                <template v-if="columna.tipo === 'estado'">
+                  <span 
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    :class="getEstadoClass(item.estado)"
+                  >
+                    {{ getEstadoLabel(item.estado) }}
+                  </span>
+                </template>
+                <template v-else-if="columna.tipo === 'fecha'">
+                  {{ formatFecha(getItemValue(item, columna.key)) }}
+                </template>
+                <template v-else-if="columna.tipo === 'boolean'">
+                  <CheckIcon v-if="getItemValue(item, columna.key)" class="w-4 h-4 text-green-600" />
+                  <XMarkIcon v-else class="w-4 h-4 text-red-600" />
+                </template>
+                <template v-else>
+                  {{ getItemValue(item, columna.key) }}
+                </template>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div class="flex justify-end space-x-2">
+                  <button
+                    @click="$emit('editar-item', item)"
+                    class="text-indigo-600 hover:text-indigo-900 flex items-center"
+                    title="Editar"
+                  >
+                    <PencilIcon class="w-4 h-4" />
+                  </button>
+                  <button
+                    @click="$emit('eliminar-item', item)"
+                    class="text-red-600 hover:text-red-900 flex items-center"
+                    title="Eliminar"
+                  >
+                    <TrashIcon class="w-4 h-4" />
+                  </button>
+                  <button
+                    v-if="catalogoConfig.puedeActivar"
+                    @click="toggleEstado(item)"
+                    class="text-gray-600 hover:text-gray-900 flex items-center"
+                    :title="item.estado === 'activo' ? 'Desactivar' : 'Activar'"
+                  >
+                    <PowerIcon class="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-    <!-- Loading state -->
-    <div v-if="loading" class="text-center py-12">
-      <ArrowPathIcon class="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
-      <p class="text-gray-500">Cargando registros...</p>
+      <!-- Estado vacío -->
+      <div v-if="itemsFiltrados.length === 0" class="text-center py-12">
+        <DocumentTextIcon class="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          No hay {{ catalogoConfig.plural.toLowerCase() }}
+        </h3>
+        <p class="text-gray-600 mb-4 max-w-md mx-auto">
+          {{ searchQuery || filters.estado ? 
+            'No se encontraron resultados para los filtros aplicados.' : 
+            `Comience agregando el primer ${catalogoConfig.singular.toLowerCase()} al sistema.` 
+          }}
+        </p>
+        <button
+          @click="$emit('nuevo-item')"
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 inline-flex items-center"
+        >
+          <PlusIcon class="w-4 h-4 mr-2" />
+          Crear {{ catalogoConfig.singular }}
+        </button>
+        <button
+          v-if="searchQuery || filters.estado"
+          @click="limpiarFiltros"
+          class="ml-3 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+
+      <!-- Paginación -->
+      <div v-if="itemsFiltrados.length > 0" class="bg-white px-6 py-3 border-t border-gray-200">
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0">
+          <div class="text-sm text-gray-700">
+            Mostrando {{ inicioPagina }}-{{ finPagina }} de {{ itemsFiltrados.length }} {{ catalogoConfig.plural.toLowerCase() }}
+          </div>
+          <div class="flex items-center space-x-2">
+            <button
+              :disabled="pagination.page === 1"
+              @click="pagination.page--"
+              class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              <ChevronLeftIcon class="w-4 h-4" />
+            </button>
+            
+            <span class="px-3 py-1 text-sm text-gray-700">
+              Página {{ pagination.page }} de {{ totalPaginas }}
+            </span>
+            
+            <button
+              :disabled="pagination.page >= totalPaginas"
+              @click="pagination.page++"
+              class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              <ChevronRightIcon class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { PlusIcon, PencilIcon, TrashIcon, InboxIcon, ArrowPathIcon } from '@heroicons/vue/24/outline'
+import { ref, computed, watch } from 'vue'
+import { 
+  PlusIcon, 
+  MagnifyingGlassIcon, 
+  DocumentTextIcon,
+  ArrowDownTrayIcon,
+  ChevronUpDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PencilIcon,
+  TrashIcon,
+  PowerIcon,
+  CheckIcon,
+  XMarkIcon
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
-  title: String,
-  singularTitle: String,
-  description: String,
-  apiEndpoint: String,
-  displayFields: Array,
-  formFields: Array
+  catalogoConfig: {
+    type: Object,
+    required: true,
+    default: () => ({
+      id: '',
+      nombre: '',
+      descripcion: '',
+      singular: 'Elemento',
+      plural: 'Elementos',
+      puedeActivar: true
+    })
+  },
+  items: {
+    type: Array,
+    default: () => []
+  },
+  columnas: {
+    type: Array,
+    default: () => []
+  }
 })
 
-const items = ref([])
-const showForm = ref(false)
-const isEditing = ref(false)
-const loading = ref(false)
-const formData = ref({})
+const emit = defineEmits(['nuevo-item', 'editar-item', 'eliminar-item', 'estado-cambiado'])
 
-const loadItems = async () => {
-  loading.value = true
-  try {
-    // TODO: Implementar query Apollo/GraphQL
-    /*
-    const { data } = await apolloClient.query({
-      query: gql`
-        query GetCatalogos($endpoint: String!) {
-          catalogos(endpoint: $endpoint) {
-            id
-            nombre
-            descripcion
-            # otros campos según el catálogo
-          }
-        }
-      `,
-      variables: {
-        endpoint: props.apiEndpoint
-      }
+// Estado reactivo
+const searchQuery = ref('')
+const filters = ref({
+  estado: ''
+})
+const itemsPorPagina = ref('10')
+const orden = ref({
+  columna: 'nombre',
+  direccion: 'asc'
+})
+
+const pagination = ref({
+  page: 1,
+  pageSize: 10
+})
+
+// Watch para resetear paginación cuando cambian los filtros
+watch([searchQuery, filters], () => {
+  pagination.value.page = 1
+})
+
+watch(itemsPorPagina, (newValue) => {
+  pagination.value.pageSize = parseInt(newValue)
+  pagination.value.page = 1
+})
+
+// Computed properties
+const itemsActivos = computed(() => 
+  props.items.filter(item => item.estado === 'activo').length
+)
+
+const itemsInactivos = computed(() => 
+  props.items.filter(item => item.estado === 'inactivo').length
+)
+
+// Items filtrados y ordenados
+const itemsFiltrados = computed(() => {
+  let filtered = props.items
+
+  // Filtrar por búsqueda
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(item => 
+      Object.values(item).some(value => 
+        value && String(value).toLowerCase().includes(query)
+      )
+    )
+  }
+
+  // Filtrar por estado
+  if (filters.value.estado) {
+    filtered = filtered.filter(item => item.estado === filters.value.estado)
+  }
+
+  // Ordenar
+  if (orden.value.columna) {
+    filtered = [...filtered].sort((a, b) => {
+      const aVal = getItemValue(a, orden.value.columna)
+      const bVal = getItemValue(b, orden.value.columna)
+      
+      if (aVal < bVal) return orden.value.direccion === 'asc' ? -1 : 1
+      if (aVal > bVal) return orden.value.direccion === 'asc' ? 1 : -1
+      return 0
     })
-    items.value = data.catalogos
-    */
-    
-    // Mock temporal
-    items.value = []
-  } catch (error) {
-    console.error('Error cargando items:', error)
-  } finally {
-    loading.value = false
   }
-}
 
-const getNestedValue = (obj, path) => {
-  return path.split('.').reduce((current, key) => current?.[key], obj) || ''
-}
+  return filtered
+})
 
-const truncateText = (text, maxLength = 50) => {
-  if (!text) return ''
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
-}
+// Items paginados
+const itemsPaginados = computed(() => {
+  const start = (pagination.value.page - 1) * pagination.value.pageSize
+  const end = start + pagination.value.pageSize
+  return itemsFiltrados.value.slice(start, end)
+})
 
-const truncateUrl = (url) => {
-  try {
-    const urlObj = new URL(url)
-    return urlObj.hostname + (urlObj.pathname !== '/' ? truncateText(urlObj.pathname, 20) : '')
-  } catch {
-    return truncateText(url, 30)
-  }
-}
+// Información de paginación
+const totalPaginas = computed(() => 
+  Math.ceil(itemsFiltrados.value.length / pagination.value.pageSize)
+)
 
-const openForm = () => {
-  isEditing.value = false
-  formData.value = {}
-  showForm.value = true
-}
+const inicioPagina = computed(() => 
+  (pagination.value.page - 1) * pagination.value.pageSize + 1
+)
 
-const editItem = (item) => {
-  isEditing.value = true
-  formData.value = { ...item }
-  showForm.value = true
-}
+const finPagina = computed(() => 
+  Math.min(pagination.value.page * pagination.value.pageSize, itemsFiltrados.value.length)
+)
 
-const deleteItem = async (item) => {
-  if (confirm(`¿Eliminar ${props.singularTitle} "${item.nombre || item.codigo}"?`)) {
-    try {
-      // TODO: Implementar mutación Apollo/GraphQL
-      /*
-      await apolloClient.mutate({
-        mutation: gql`
-          mutation DeleteCatalogo($id: ID!, $endpoint: String!) {
-            deleteCatalogo(id: $id, endpoint: $endpoint) {
-              success
-              message
-            }
-          }
-        `,
-        variables: {
-          id: item.id,
-          endpoint: props.apiEndpoint
-        }
-      })
-      */
-      items.value = items.value.filter(i => i.id !== item.id)
-    } catch (error) {
-      console.error('Error eliminando item:', error)
-    }
-  }
-}
-
-const saveItem = async () => {
-  try {
-    if (isEditing.value) {
-      // TODO: Implementar mutación Apollo/GraphQL para actualizar
-      /*
-      const { data } = await apolloClient.mutate({
-        mutation: gql`
-          mutation UpdateCatalogo($id: ID!, $input: CatalogoInput!, $endpoint: String!) {
-            updateCatalogo(id: $id, input: $input, endpoint: $endpoint) {
-              id
-              nombre
-              descripcion
-              # otros campos
-            }
-          }
-        `,
-        variables: {
-          id: formData.value.id,
-          input: formData.value,
-          endpoint: props.apiEndpoint
-        }
-      })
-      const index = items.value.findIndex(i => i.id === formData.value.id)
-      items.value[index] = data.updateCatalogo
-      */
-      const index = items.value.findIndex(i => i.id === formData.value.id)
-      items.value[index] = { ...formData.value }
+// Métodos
+const getItemValue = (item, key) => {
+  const keys = key.split('.')
+  let value = item
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k]
     } else {
-      // TODO: Implementar mutación Apollo/GraphQL para crear
-      /*
-      const { data } = await apolloClient.mutate({
-        mutation: gql`
-          mutation CreateCatalogo($input: CatalogoInput!, $endpoint: String!) {
-            createCatalogo(input: $input, endpoint: $endpoint) {
-              id
-              nombre
-              descripcion
-              # otros campos
-            }
-          }
-        `,
-        variables: {
-          input: formData.value,
-          endpoint: props.apiEndpoint
-        }
-      })
-      items.value.push(data.createCatalogo)
-      */
-      items.value.push({ ...formData.value, id: Date.now().toString() })
+      return ''
     }
-    closeForm()
-  } catch (error) {
-    console.error('Error guardando item:', error)
+  }
+  return value || ''
+}
+
+const getCellClass = (item, key) => {
+  const baseClass = 'px-6 py-4 whitespace-nowrap text-sm'
+  if (key === 'nombre' || key === 'descripcion') {
+    return `${baseClass} text-gray-900 font-medium`
+  }
+  return `${baseClass} text-gray-500`
+}
+
+const getEstadoClass = (estado) => {
+  const classes = {
+    activo: 'bg-green-100 text-green-800',
+    inactivo: 'bg-red-100 text-red-800',
+    pendiente: 'bg-yellow-100 text-yellow-800'
+  }
+  return classes[estado] || 'bg-gray-100 text-gray-800'
+}
+
+const getEstadoLabel = (estado) => {
+  const labels = {
+    activo: 'Activo',
+    inactivo: 'Inactivo',
+    pendiente: 'Pendiente'
+  }
+  return labels[estado] || estado
+}
+
+const formatFecha = (fecha) => {
+  if (!fecha) return '-'
+  return new Date(fecha).toLocaleDateString('es-ES')
+}
+
+const ordenarPor = (columna) => {
+  if (orden.value.columna === columna) {
+    orden.value.direccion = orden.value.direccion === 'asc' ? 'desc' : 'asc'
+  } else {
+    orden.value.columna = columna
+    orden.value.direccion = 'asc'
   }
 }
 
-const closeForm = () => {
-  showForm.value = false
-  formData.value = {}
-  isEditing.value = false
+const toggleEstado = (item) => {
+  const nuevoEstado = item.estado === 'activo' ? 'inactivo' : 'activo'
+  emit('estado-cambiado', { ...item, estado: nuevoEstado })
 }
 
-onMounted(loadItems)
+const limpiarFiltros = () => {
+  searchQuery.value = ''
+  filters.value.estado = ''
+}
+
+const exportarDatos = () => {
+  const datos = itemsFiltrados.value.map(item => {
+    const fila = {}
+    props.columnas.forEach(col => {
+      fila[col.label] = getItemValue(item, col.key)
+    })
+    return fila
+  })
+  
+  const csv = convertirACSV(datos)
+  descargarCSV(csv, `${catalogoConfig.plural}_${new Date().toISOString().split('T')[0]}.csv`)
+}
+
+const convertirACSV = (datos) => {
+  if (datos.length === 0) return ''
+  
+  const headers = Object.keys(datos[0])
+  const csvRows = [
+    headers.join(','),
+    ...datos.map(row => 
+      headers.map(header => {
+        const valor = row[header] || ''
+        return `"${String(valor).replace(/"/g, '""')}"`
+      }).join(',')
+    )
+  ]
+  
+  return csvRows.join('\n')
+}
+
+const descargarCSV = (csv, filename) => {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
+  link.style.visibility = 'hidden'
+  
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
 </script>
+
+<style scoped>
+.catalogo-manager {
+  min-height: 500px;
+}
+</style>

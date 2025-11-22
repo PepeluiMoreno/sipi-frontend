@@ -13,7 +13,7 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import { ESTADOS_INMUEBLE, ESTADO_MAPEO } from '../../../config/estadosInmueble'
+import { ESTADOS_INMUEBLE, ESTADO_MAPEO } from '../../core/mocks'
 
 const props = defineProps({
   selectedLocation: Object,

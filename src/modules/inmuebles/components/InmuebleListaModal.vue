@@ -60,7 +60,7 @@
 
 <script setup>
 import { BuildingOfficeIcon } from '@heroicons/vue/24/outline'
-import { ESTADOS_INMUEBLE } from '../../../config/estadosInmueble'
+import { ESTADOS_INMUEBLE } from '../../core/mocks'
 
 defineProps(['property', 'isSelected'])
 defineEmits(['select'])

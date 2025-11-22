@@ -59,12 +59,11 @@
 
 <script setup>
 import { ref, watch, onMounted, provide } from 'vue'
-import InmuebleFiltros from '../components/inmuebles/InmuebleFiltros.vue'
-import InmuebleDataGrid from '../components/inmuebles/InmuebleDataGrid.vue'
-import InmuebleFormulario from '../components/inmuebles/InmuebleFormulario.vue'
-import ModalMapa from '../components/inmuebles/ModalMapa.vue'
-import { ESTADO_MAPEO, ESTADOS_INMUEBLE } from '../config/estadosInmueble'
-import { mockInmuebles, printMockStats } from '../mocks/inmueblesMock'
+import InmuebleFiltros from '../components/InmuebleFiltros.vue'
+import InmuebleDataGrid from '../components/InmuebleDataGrid.vue'
+import InmuebleFormulario from '../components/InmuebleFormulario.vue'
+import ModalMapa from '../components/ModalMapa.vue'
+import { ESTADO_MAPEO, ESTADOS_INMUEBLE, mockInmuebles, printMockStats } from '../../core/mocks'
 import {
   MapPinIcon,
   MagnifyingGlassIcon

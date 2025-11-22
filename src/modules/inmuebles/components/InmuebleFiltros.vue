@@ -50,7 +50,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
-import { ESTADOS_INMUEBLE } from '../../../config/estadosInmueble'
+import { ESTADOS_INMUEBLE } from '../../core/mocks'
 
 const props = defineProps(['selectedLocation'])
 const emit = defineEmits(['location-selected', 'filters-changed'])
