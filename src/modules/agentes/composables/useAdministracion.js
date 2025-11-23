@@ -1,9 +1,9 @@
 import { useAgenteBase } from './useAgenteBase'
+import * as queries from '../graphql/administracionQueries'
 
 export function useAdministracion() {
-  const base = useAgenteBase('administraciones', { conContacto: true, conRelaciones: true })
+  const base = useAgenteBase('administraciones', queries, { conContacto: true, conRelaciones: true })
 
-  // Ampliar con filtros específicos
   const listarPorAmbito = async (ambito) => {
     return base.listar({ ambito })
   }

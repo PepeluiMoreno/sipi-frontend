@@ -1,212 +1,255 @@
-import { ref, computed } from 'vue'
+// src/modules/usuarios/composables/useUsuarios.js
+
+import { ref } from 'vue'
 import { useQuery, useMutation } from '@vue/apollo-composable'
 import {
   LISTAR_USUARIOS,
   OBTENER_USUARIO,
   CREAR_USUARIO,
   ACTUALIZAR_USUARIO,
-  ELIMINAR_USUARIO,
-  ASIGNAR_ROLES_USUARIO,
-  ACTUALIZAR_AVATAR,
-  REENVIAR_VERIFICACION_EMAIL
+  ELIMINAR_USUARIO
 } from '../graphql/usuarioQueries'
+
+// ✅ Mocks para desarrollo
+import { mockUsers, simulateNetworkDelay } from '../mocks/usuariosMocks'
 
 export function useUsuarios() {
   const usuarios = ref([])
   const usuario = ref(null)
   const loading = ref(false)
   const error = ref(null)
-  
-  const pagination = ref({
-    page: 1,
-    pageSize: 20,
-    total: 0,
-    totalPages: 0
-  })
+  const pagination = ref({ page: 1, pageSize: 50, total: 0 })
+  const backendError = ref(false)
 
-  const hasUsuarios = computed(() => usuarios.value.length > 0)
+  // ✅ Intentar inicializar mutaciones
+  let crearUsuarioMutation, actualizarUsuarioMutation, eliminarUsuarioMutation
 
-  // Listar usuarios
-  const { refetch: refetchUsuarios } = useQuery(LISTAR_USUARIOS, {
-    filters: {},
-    pagination: { page: 1, pageSize: 50 }
-  }, {
-    fetchPolicy: 'cache-and-network'
-  })
+  try {
+    crearUsuarioMutation = useMutation(CREAR_USUARIO).mutate
+  } catch (e) {
+    backendError.value = true
+    console.warn('⚠️ Apollo Client no disponible para crearUsuario')
+  }
 
+  try {
+    actualizarUsuarioMutation = useMutation(ACTUALIZAR_USUARIO).mutate
+  } catch (e) {
+    backendError.value = true
+    console.warn('⚠️ Apollo Client no disponible para actualizarUsuario')
+  }
+
+  try {
+    eliminarUsuarioMutation = useMutation(ELIMINAR_USUARIO).mutate
+  } catch (e) {
+    backendError.value = true
+    console.warn('⚠️ Apollo Client no disponible para eliminarUsuario')
+  }
+
+  /**
+   * Lista todos los usuarios
+   */
   const listar = async (filters = {}) => {
     loading.value = true
     error.value = null
-
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para listar usuarios')
+      try {
+        await simulateNetworkDelay()
+        usuarios.value = mockUsers
+        pagination.value.total = mockUsers.length
+        return { items: usuarios.value, total: pagination.value.total }
+      } catch (err) {
+        error.value = `Error al cargar usuarios: ${err.message}`
+        throw err
+      } finally {
+        loading.value = false
+      }
+    }
+    
     try {
-      const { data } = await refetchUsuarios({
-        filters,
+      const { data, error: queryError } = await useQuery(LISTAR_USUARIOS, {
         pagination: {
-          page: filters.page || 1,
-          pageSize: filters.pageSize || 20
+          page: pagination.value.page,
+          pageSize: pagination.value.pageSize
         }
       })
-
-      const response = data?.usuarios
+      if (queryError) throw queryError
+      const response = data.value?.usuarios
       usuarios.value = response?.items || []
-      pagination.value = {
-        page: response?.page || 1,
-        pageSize: response?.pageSize || 20,
-        total: response?.total || 0,
-        totalPages: response?.totalPages || 0
-      }
-
-      return { items: usuarios.value, pagination: pagination.value }
+      pagination.value.total = response?.total || 0
+      return { items: usuarios.value, total: pagination.value.total }
     } catch (err) {
       error.value = `Error al cargar usuarios: ${err.message}`
-      console.error('Error en listar usuarios:', err)
+      console.error('Error en listar Usuarios:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  // Obtener usuario por ID
-  const { refetch: refetchUsuario } = useQuery(OBTENER_USUARIO, { id: '' })
-
+  /**
+   * Obtiene un usuario por ID
+   */
   const obtener = async (id) => {
     loading.value = true
     error.value = null
-
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para obtener usuario')
+      await simulateNetworkDelay()
+      
+      const found = mockUsers.find(u => u.id === id)
+      if (!found) {
+        error.value = 'Usuario no encontrado'
+        throw new Error('Usuario no encontrado')
+      }
+      
+      usuario.value = found
+      return found
+    }
+    
     try {
-      const { data } = await refetchUsuario({ id })
-      usuario.value = data?.usuario?.item || null
+      const { data, error: queryError } = await useQuery(OBTENER_USUARIO, { id })
+      if (queryError) throw queryError
+      usuario.value = data.value?.usuario?.item || null
       return usuario.value
     } catch (err) {
       error.value = `Error al obtener usuario: ${err.message}`
-      console.error('Error en obtener usuario:', err)
+      console.error('Error en obtener Usuario:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  // Mutations
-  const { mutate: crearMutation } = useMutation(CREAR_USUARIO)
-  const { mutate: actualizarMutation } = useMutation(ACTUALIZAR_USUARIO)
-  const { mutate: eliminarMutation } = useMutation(ELIMINAR_USUARIO)
-  const { mutate: asignarRolesMutation } = useMutation(ASIGNAR_ROLES_USUARIO)
-  const { mutate: actualizarAvatarMutation } = useMutation(ACTUALIZAR_AVATAR)
-  const { mutate: reenviarVerificacionMutation } = useMutation(REENVIAR_VERIFICACION_EMAIL)
-
+  /**
+   * Crea un nuevo usuario
+   */
   const crear = async (inputData) => {
     loading.value = true
     error.value = null
-
-    try {
-      const { data } = await crearMutation({ input: inputData })
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para crear usuario')
+      await simulateNetworkDelay()
       
-      if (data?.crearUsuario?.success) {
-        const nuevoUsuario = data.crearUsuario.item
-        usuarios.value.unshift(nuevoUsuario)
-        pagination.value.total++
-        return nuevoUsuario
-      } else {
-        throw new Error(data?.crearUsuario?.message || 'Error al crear usuario')
+      const nuevo = {
+        ...inputData,
+        id: Date.now().toString(),
+        email_verificado: false,
+        roles: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
+      
+      usuarios.value.unshift(nuevo)
+      pagination.value.total++
+      return nuevo
+    }
+    
+    try {
+      const { data, errors } = await crearUsuarioMutation({ input: inputData })
+      if (errors) throw new Error(errors[0].message)
+      const nuevo = data.crearUsuario.item
+      usuarios.value.unshift(nuevo)
+      pagination.value.total++
+      return nuevo
     } catch (err) {
       error.value = `Error al crear usuario: ${err.message}`
+      console.error('Error en crear Usuario:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
+  /**
+   * Actualiza un usuario existente
+   */
   const actualizar = async (id, inputData) => {
     loading.value = true
     error.value = null
-
-    try {
-      const { data } = await actualizarMutation({ id, input: inputData })
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para actualizar usuario')
+      await simulateNetworkDelay()
       
-      if (data?.actualizarUsuario?.success) {
-        const usuarioActualizado = data.actualizarUsuario.item
-        
-        // Actualizar en la lista
-        const index = usuarios.value.findIndex(u => u.id === id)
-        if (index !== -1) {
-          usuarios.value[index] = { ...usuarios.value[index], ...usuarioActualizado }
-        }
-        
-        // Actualizar usuario actual si es el mismo
-        if (usuario.value?.id === id) {
-          usuario.value = { ...usuario.value, ...usuarioActualizado }
-        }
-        
-        return usuarioActualizado
-      } else {
-        throw new Error(data?.actualizarUsuario?.message || 'Error al actualizar usuario')
+      const index = usuarios.value.findIndex(u => u.id === id)
+      if (index === -1) {
+        error.value = 'Usuario no encontrado'
+        throw new Error('Usuario no encontrado')
       }
+      
+      const actualizado = {
+        ...usuarios.value[index],
+        ...inputData,
+        id,
+        updated_at: new Date().toISOString()
+      }
+      
+      usuarios.value[index] = actualizado
+      return actualizado
+    }
+    
+    try {
+      const { data, errors } = await actualizarUsuarioMutation({ id, input: inputData })
+      if (errors) throw new Error(errors[0].message)
+      const actualizado = data.actualizarUsuario.item
+      const index = usuarios.value.findIndex(u => u.id === id)
+      if (index !== -1) usuarios.value[index] = actualizado
+      return actualizado
     } catch (err) {
       error.value = `Error al actualizar usuario: ${err.message}`
+      console.error('Error en actualizar Usuario:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
+  /**
+   * Elimina un usuario
+   */
   const eliminar = async (id) => {
     loading.value = true
     error.value = null
-
-    try {
-      const { data } = await eliminarMutation({ id })
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para eliminar usuario')
+      await simulateNetworkDelay()
       
-      if (data?.eliminarUsuario?.success) {
-        usuarios.value = usuarios.value.filter(u => u.id !== id)
-        pagination.value.total--
-        
-        if (usuario.value?.id === id) {
-          usuario.value = null
-        }
-        
-        return true
-      } else {
-        throw new Error(data?.eliminarUsuario?.message || 'Error al eliminar usuario')
-      }
+      usuarios.value = usuarios.value.filter(u => u.id !== id)
+      pagination.value.total--
+      return true
+    }
+    
+    try {
+      const { data, errors } = await eliminarUsuarioMutation({ id })
+      if (errors) throw new Error(errors[0].message)
+      usuarios.value = usuarios.value.filter(u => u.id !== id)
+      pagination.value.total--
+      return data.eliminarUsuario.success
     } catch (err) {
       error.value = `Error al eliminar usuario: ${err.message}`
+      console.error('Error en eliminar Usuario:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  const asignarRoles = async (usuarioId, rolesIds) => {
-    try {
-      const { data } = await asignarRolesMutation({ usuarioId, rolesIds })
-      return data?.asignarRolesUsuario
-    } catch (err) {
-      error.value = `Error al asignar roles: ${err.message}`
-      throw err
-    }
+  /**
+   * Cambia de página en la paginación
+   */
+  const cambiarPagina = (page) => {
+    pagination.value.page = page
+    return listar()
   }
 
-  const actualizarAvatar = async (usuarioId, avatar) => {
-    try {
-      const { data } = await actualizarAvatarMutation({ usuarioId, avatar })
-      return data?.actualizarAvatar
-    } catch (err) {
-      error.value = `Error al actualizar avatar: ${err.message}`
-      throw err
-    }
-  }
-
-  const reenviarVerificacion = async (usuarioId) => {
-    try {
-      const { data } = await reenviarVerificacionMutation({ usuarioId })
-      return data?.reenviarVerificacionEmail
-    } catch (err) {
-      error.value = `Error al reenviar verificación: ${err.message}`
-      throw err
-    }
-  }
-
+  /**
+   * Resetea el estado del composable
+   */
   const reset = () => {
     usuarios.value = []
     usuario.value = null
@@ -215,25 +258,18 @@ export function useUsuarios() {
   }
 
   return {
-    // State
     usuarios,
     usuario,
     loading,
     error,
+    backendError,
     pagination,
-    
-    // Computed
-    hasUsuarios,
-    
-    // Methods
     listar,
     obtener,
     crear,
     actualizar,
     eliminar,
-    asignarRoles,
-    actualizarAvatar,
-    reenviarVerificacion,
+    cambiarPagina,
     reset
   }
 }

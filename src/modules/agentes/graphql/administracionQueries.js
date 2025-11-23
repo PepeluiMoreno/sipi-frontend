@@ -1,41 +1,43 @@
-import { gql } from '@apollo/client/core'
+import gql from 'graphql-tag'
 
-export const LISTAR_ADMINISTRACIONES = gql`
-  query ListarAdministraciones($filters: AdministracionFilters, $pagination: PaginationInput) {
-    administraciones(filters: $filters, pagination: $pagination) {
-      items {
+// Fragmento con campos comunes
+const ADMINISTRACION_BASE_FRAGMENT = gql`
+  fragment AdministracionBase on Administracion {
+    id
+    nombre
+    ambito
+    nombreResponsable
+    numeroIdentificacion
+    email
+    telefono
+    direccion
+    codigoPostal
+    localidad {
+      id
+      nombre
+      provincia {
         id
         nombre
-        ambito
-        tipoIdentificacion
-        numeroIdentificacion
-        email
-        telefono
-        direccion
-        codigoPostal
-        localidadId
-        localidad {
-          id
-          nombre
-          provincia {
-            id
-            nombre
-            comunidadAutonoma {
-              id
-              nombre
-            }
-          }
-        }
-        comunidadAutonomaId
-        provinciaId
-        titulares {
-          id
-          fechaInicio
-          fechaFin
-          cargo
-        }
-        createdAt
-        updatedAt
+      }
+    }
+    titulares {
+      id
+      nombre
+      apellidos
+      fechaInicio
+      fechaFin
+    }
+    createdAt
+    updatedAt
+  }
+`
+
+// Listar administraciones con paginación y filtros
+export const LISTAR_ADMINISTRACIONES = gql`
+  query ListarAdministraciones($filters: AdministracionFiltersInput, $pagination: PaginationInput) {
+    administraciones(filters: $filters, pagination: $pagination) {
+      items {
+        ...AdministracionBase
       }
       total
       totalPages
@@ -43,77 +45,50 @@ export const LISTAR_ADMINISTRACIONES = gql`
       pageSize
     }
   }
+  ${ADMINISTRACION_BASE_FRAGMENT}
 `
 
+// Obtener una administración por ID
 export const OBTENER_ADMINISTRACION = gql`
   query ObtenerAdministracion($id: ID!) {
     administracion(id: $id) {
       item {
-        id
-        nombre
-        ambito
-        tipoIdentificacion
-        numeroIdentificacion
-        email
-        telefono
-        direccion
-        codigoPostal
-        localidadId
-        localidad {
-          id
-          nombre
-          provincia {
-            id
-            nombre
-            comunidadAutonoma {
-              id
-              nombre
-            }
-          }
-        }
-        comunidadAutonomaId
-        provinciaId
-        titulares {
-          id
-          fechaInicio
-          fechaFin
-          cargo
-        }
-        createdAt
-        updatedAt
+        ...AdministracionBase
       }
     }
   }
+  ${ADMINISTRACION_BASE_FRAGMENT}
 `
 
+// Crear nueva administración
 export const CREAR_ADMINISTRACION = gql`
   mutation CrearAdministracion($input: AdministracionInput!) {
     crearAdministracion(input: $input) {
-      success
       item {
-        id
-        nombre
-        ambito
+        ...AdministracionBase
       }
+      success
       message
     }
   }
+  ${ADMINISTRACION_BASE_FRAGMENT}
 `
 
+// Actualizar administración existente
 export const ACTUALIZAR_ADMINISTRACION = gql`
   mutation ActualizarAdministracion($id: ID!, $input: AdministracionInput!) {
     actualizarAdministracion(id: $id, input: $input) {
-      success
       item {
-        id
-        nombre
-        ambito
+        ...AdministracionBase
       }
+      success
       message
     }
   }
+  ${ADMINISTRACION_BASE_FRAGMENT}
 `
 
+// Eliminar administración
 export const ELIMINAR_ADMINISTRACION = gql`
   mutation EliminarAdministracion($id: ID!) {
     eliminarAdministracion(id: $id) {

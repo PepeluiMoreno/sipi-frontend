@@ -4,14 +4,15 @@ import { useQuery, useMutation } from '@vue/apollo-composable'
 /**
  * Composable base para agentes con datos de contacto
  * @param {String} agenteNombre - Nombre del agente en GraphQL (ej: 'tecnicos')
+ * @param {Object} queries - Objeto con las queries/mutations del agente
  * @param {Object} options - Opciones de configuración
  */
-export function useAgenteBase(agenteNombre, options = {}) {
+export function useAgenteBase(agenteNombre, queries, options = {}) {
   const {
     pageSize = 50,
     orderBy = 'nombre_ASC',
-    conContacto = true,  // Incluye datos de dirección/contacto
-    conRelaciones = false // Incluye relaciones complejas
+    conContacto = true,
+    conRelaciones = false
   } = options
 
   const items = ref([])
@@ -34,10 +35,9 @@ export function useAgenteBase(agenteNombre, options = {}) {
     error.value = null
 
     try {
-      const queryName = `listar${agenteNombre.charAt(0).toUpperCase() + agenteNombre.slice(1)}`
-      const query = require(`../graphql/${agenteNombre}Queries.js`)[queryName]
+      const { LISTAR } = queries
 
-      const { data, error: queryError } = await useQuery(query, {
+      const { result, error: queryError, onResult } = useQuery(LISTAR, {
         filters: {
           search: filters.search,
           localidadId: filters.localidadId,
@@ -50,12 +50,19 @@ export function useAgenteBase(agenteNombre, options = {}) {
         }
       })
 
-      if (queryError) throw queryError
+      // Esperar el resultado
+      await new Promise((resolve) => {
+        const stop = onResult(({ data }) => {
+          const response = data?.[agenteNombre]
+          items.value = response?.items || []
+          pagination.value.total = response?.total || 0
+          pagination.value.totalPages = response?.totalPages || 0
+          stop()
+          resolve()
+        })
+      })
 
-      const response = data.value?.[agenteNombre]
-      items.value = response?.items || []
-      pagination.value.total = response?.total || 0
-      pagination.value.totalPages = response?.totalPages || 0
+      if (queryError.value) throw queryError.value
 
       return { items: items.value, total: pagination.value.total }
     } catch (err) {
@@ -67,20 +74,26 @@ export function useAgenteBase(agenteNombre, options = {}) {
     }
   }
 
-  // Obtener por ID (con datos completos)
+  // Obtener por ID
   const obtener = async (id) => {
     loading.value = true
     error.value = null
 
     try {
-      const queryName = `obtener${agenteNombre.charAt(0).toUpperCase() + agenteNombre.slice(1)}`
-      const query = require(`../graphql/${agenteNombre}Queries.js`)[queryName]
+      const { OBTENER } = queries
 
-      const { data, error: queryError } = await useQuery(query, { id })
+      const { result, error: queryError, onResult } = useQuery(OBTENER, { id })
 
-      if (queryError) throw queryError
+      await new Promise((resolve) => {
+        const stop = onResult(({ data }) => {
+          item.value = data?.[agenteNombre]?.item || null
+          stop()
+          resolve()
+        })
+      })
 
-      item.value = data.value?.[agenteNombre]?.item || null
+      if (queryError.value) throw queryError.value
+
       return item.value
     } catch (err) {
       error.value = `Error al obtener ${agenteNombre}: ${err.message}`
@@ -97,10 +110,8 @@ export function useAgenteBase(agenteNombre, options = {}) {
     error.value = null
 
     try {
-      const mutationName = `crear${agenteNombre.charAt(0).toUpperCase() + agenteNombre.slice(1)}`
-      const mutation = require(`../graphql/${agenteNombre}Queries.js`)[mutationName]
-
-      const { mutate } = useMutation(mutation)
+      const { CREAR } = queries
+      const { mutate } = useMutation(CREAR)
       const { data, errors } = await mutate({ input: inputData })
 
       if (errors) throw new Error(errors[0].message)
@@ -125,10 +136,8 @@ export function useAgenteBase(agenteNombre, options = {}) {
     error.value = null
 
     try {
-      const mutationName = `actualizar${agenteNombre.charAt(0).toUpperCase() + agenteNombre.slice(1)}`
-      const mutation = require(`../graphql/${agenteNombre}Queries.js`)[mutationName]
-
-      const { mutate } = useMutation(mutation)
+      const { ACTUALIZAR } = queries
+      const { mutate } = useMutation(ACTUALIZAR)
       const { data, errors } = await mutate({ id, input: inputData })
 
       if (errors) throw new Error(errors[0].message)
@@ -156,10 +165,8 @@ export function useAgenteBase(agenteNombre, options = {}) {
     error.value = null
 
     try {
-      const mutationName = `eliminar${agenteNombre.charAt(0).toUpperCase() + agenteNombre.slice(1)}`
-      const mutation = require(`../graphql/${agenteNombre}Queries.js`)[mutationName]
-
-      const { mutate } = useMutation(mutation)
+      const { ELIMINAR } = queries
+      const { mutate } = useMutation(ELIMINAR)
       const { data, errors } = await mutate({ id })
 
       if (errors) throw new Error(errors[0].message)

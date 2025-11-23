@@ -4,7 +4,7 @@
     <div class="flex justify-between items-center h-full">
       <!-- Nombre de la aplicación sin logo -->
       <div class="flex items-center">
-        <h1 class="text-xl font-bold text-gray-900">SIPI v.1.0 - Sistema de Información del Patrimonio Inmatriculado</h1>
+        <h1 class="text-xl font-bold text-gray-900">SIPI (versión beta) - Sistema de Información del Patrimonio Inmatriculado</h1>
       </div>
 
       <!-- Fecha, hora y usuario -->

@@ -1,315 +1,342 @@
-<!-- src/modules/usuarios/views/ConfigUsuarios.vue -->
 <template>
-  <div class="h-full flex">
-    <!-- Sidebar -->
-    <UsuariosSidebar
-      :users="usuarios"
-      :roles="roles"
-      :selected-item="selectedItem"
-      :selected-type="selectedType"
-      @select-user="onUserSelected"
-      @select-role="onRoleSelected"
-      @new-user="showNewUserForm"
-      @new-role="showNewRoleForm"
+  <div class="min-h-screen bg-gray-50 p-6" :class="{ 'overflow-hidden': usuarioSeleccionado }">
+    <!-- Overlay cuando el panel de detalles está abierto -->
+    <div
+      v-if="usuarioSeleccionado"
+      class="fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300"
+      @click="usuarioSeleccionado = null"
     />
 
-    <!-- Panel principal -->
-    <div class="flex-1 flex flex-col">
-      <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-200 bg-white">
-        <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">Gestión de Usuarios y Roles</h1>
-            <p class="text-sm text-gray-600 mt-1">Administre los usuarios y permisos del sistema</p>
-          </div>
-          <div class="flex space-x-3">
-            <button
-              @click="showNewUserForm"
-              class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center text-sm"
-            >
-              <PlusIcon class="w-4 h-4 mr-2" />
-              Nuevo Usuario
-            </button>
-            <button
-              @click="showNewRoleForm"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center text-sm"
-            >
-              <PlusIcon class="w-4 h-4 mr-2" />
-              Nuevo Rol
-            </button>
-          </div>
+    <!-- Header Principal -->
+    <div class="mb-6 relative z-10">
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <p class="text-gray-600 mt-1">Administre usuarios, roles y permisos del sistema</p>
         </div>
-      </div>
-
-      <!-- Loading state -->
-      <div v-if="usuariosLoading || rolesLoading" class="flex-1 flex items-center justify-center">
-        <div class="text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p class="text-gray-600">Cargando datos...</p>
-        </div>
-      </div>
-
-      <!-- Error state -->
-      <div v-else-if="usuariosError || rolesError" class="flex-1 flex items-center justify-center">
-        <div class="text-center text-red-600">
-          <ExclamationTriangleIcon class="w-12 h-12 mx-auto mb-4" />
-          <p>Error al cargar los datos</p>
-          <button 
-            @click="cargarDatos"
-            class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        <div class="flex space-x-3">
+          <button
+            @click="mostrarModalUsuario = true"
+            class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center text-sm font-medium"
+            :disabled="usuarioSeleccionado"
+            :class="{ 'opacity-50 cursor-not-allowed': usuarioSeleccionado }"
           >
-            Reintentar
+            <PlusIcon class="w-4 h-4 mr-2" />
+            Nuevo Usuario
           </button>
-        </div>
-      </div>
-
-      <!-- Contenido dinámico -->
-      <div v-else class="flex-1 overflow-hidden">
-        <!-- Vista de detalles de usuario -->
-        <UsuarioDetalles
-          v-if="selectedItem && selectedType === 'user'"
-          :user="selectedItem"
-          :available-roles="roles"
-          @user-updated="onUserUpdated"
-          @user-deleted="onUserDeleted"
-          @edit-user="editUser"
-          @cancel-selection="clearSelection"
-        />
-
-        <!-- Vista de detalles de rol -->
-        <RoleDetalles
-          v-else-if="selectedItem && selectedType === 'role'"
-          :role="selectedItem"
-          :users="usuarios"
-          @role-updated="onRoleUpdated"
-          @role-deleted="onRoleDeleted"
-          @edit-role="editRole"
-          @cancel-selection="clearSelection"
-        />
-
-        <!-- Vista vacía -->
-        <div v-else class="h-full flex items-center justify-center text-gray-500">
-          <div class="text-center">
-            <UsersIcon class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Seleccione un usuario o rol</h3>
-            <p class="text-gray-600">Elija un elemento de la lista para ver sus detalles</p>
-          </div>
+          <button
+            @click="mostrarModalRol = true"
+            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center text-sm font-medium"
+            :disabled="usuarioSeleccionado"
+            :class="{ 'opacity-50 cursor-not-allowed': usuarioSeleccionado }"
+          >
+            <PlusIcon class="w-4 h-4 mr-2" />
+            Nuevo Rol
+          </button>
         </div>
       </div>
     </div>
 
+    <!-- Panel de Control -->
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 relative z-10">
+      <!-- Filtros -->
+      <UsuarioFilters
+        :usuarios="usuarios"
+        :roles="roles"
+        :organizaciones="organizaciones"
+        :filtros="filtros"
+        :usuario-seleccionado="usuarioSeleccionado"
+        @update-filtros="actualizarFiltros"
+        @reset-filtros="resetearFiltros"
+        class="xl:col-span-1"
+      />
+
+      <!-- Contenido Principal -->
+      <div class="xl:col-span-3" :class="{ 'opacity-50 pointer-events-none': usuarioSeleccionado }">
+        <!-- Barra de Herramientas -->
+        <UsuarioToolbar
+          :total-resultados="usuariosFiltrados.length"
+          :busqueda="filtros.busqueda"
+          :usuario-seleccionado="usuarioSeleccionado"
+          @update-busqueda="actualizarBusqueda"
+          @reset-filtros="resetearFiltros"
+          @nuevo-usuario="mostrarModalUsuario = true"
+          class="mb-4"
+        />
+
+        <!-- Grid de Usuarios -->
+        <UsuarioGrid
+          :usuarios="usuariosFiltrados"
+          :usuario-seleccionado="usuarioSeleccionado"
+          :organizaciones="organizaciones"
+          @seleccionar-usuario="seleccionarUsuario"
+          @editar-usuario="editarUsuario"
+          @eliminar-usuario="eliminarUsuario"
+        />
+      </div>
+    </div>
+
+    <!-- Panel de Detalles -->
+    <UsuarioDetailPanel
+      v-if="usuarioSeleccionado"
+      :usuario="usuarioSeleccionado"
+      :organizaciones="organizaciones"
+      :roles-disponibles="roles"
+      @cerrar="usuarioSeleccionado = null"
+      @editar-usuario="editarUsuario"
+      @eliminar-usuario="eliminarUsuario"
+      @quitar-rol="quitarRol"
+      @roles-actualizados="onRolesActualizados"
+    />
+
     <!-- Modales -->
     <UsuarioFormModal
-      v-if="showUserForm"
-      :user="editingUser"
-      :is-editing="!!editingUser"
-      @save="onUserSaved"
-      @close="closeUserForm"
+      v-if="mostrarModalUsuario"
+      :user="usuarioEditando"
+      :is-editing="!!usuarioEditando"
+      @save="guardarUsuario"
+      @close="cerrarModalUsuario"
     />
 
     <RoleFormModal
-      v-if="showRoleForm"
-      :role="editingRole"
-      :is-editing="!!editingRole"
-      @save="onRoleSaved"
-      @close="closeRoleForm"
+      v-if="mostrarModalRol"
+      :role="rolEditando"
+      :is-editing="!!rolEditando"
+      @save="guardarRol"
+      @close="cerrarModalRol"
     />
 
     <DeleteConfirmationModal
-      v-if="showDeleteModal"
-      :item="itemToDelete"
-      :item-type="selectedType"
-      @confirm="confirmDelete"
-      @cancel="cancelDelete"
+      v-if="mostrarModalEliminar"
+      :item="itemAEliminar"
+      item-type="user"
+      @confirm="confirmarEliminacion"
+      @cancel="cancelarEliminacion"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { PlusIcon, UsersIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
-import { useUsuarios, useRoles } from '../composables'
+import { ref, computed, onMounted } from 'vue'
+import { PlusIcon } from '@heroicons/vue/24/outline'
 
-// Importaciones de componentes - RUTAS CORREGIDAS
-import UsuariosSidebar from '../components/UsuariosSidebar.vue'
-import UsuarioDetalles from '../components/UsuarioDetalles.vue'
-import RoleDetalles from '../components/RoleDetalles.vue'
+// Components
+import UsuarioFilters from '../components/UsuarioFilters.vue'
+import UsuarioGrid from '../components/UsuarioGrid.vue'
+import UsuarioDetailPanel from '../components/UsuarioDetailPanel.vue'
+import UsuarioToolbar from '../components/UsuarioToolbar.vue'
 import UsuarioFormModal from '../components/UsuarioFormModal.vue'
 import RoleFormModal from '../components/RoleFormModal.vue'
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal.vue'
 
-// Composables
-const {
-  usuarios,
-  loading: usuariosLoading,
-  error: usuariosError,
-  listar: listarUsuarios,
-  crear: crearUsuario,
-  actualizar: actualizarUsuario,
-  eliminar: eliminarUsuario
-} = useUsuarios()
+// Mocks
+import { mockUsers, mockRoles, mockOrganizaciones } from '../mocks/usuariosMocks'
 
-const {
-  roles,
-  loading: rolesLoading,
-  error: rolesError,
-  listar: listarRoles,
-  crear: crearRol,
-  actualizar: actualizarRol,
-  eliminar: eliminarRol
-} = useRoles()
+// Estado
+const usuarios = ref([])
+const roles = ref([])
+const organizaciones = ref([])
+const usuarioSeleccionado = ref(null)
+const usuarioEditando = ref(null)
+const rolEditando = ref(null)
+const itemAEliminar = ref(null)
 
-// Estado local
-const selectedItem = ref(null)
-const selectedType = ref(null)
-const showUserForm = ref(false)
-const showRoleForm = ref(false)
-const showDeleteModal = ref(false)
-const editingUser = ref(null)
-const editingRole = ref(null)
-const itemToDelete = ref(null)
-
-// Cargar datos iniciales
-const cargarDatos = async () => {
-  try {
-    await Promise.all([
-      listarUsuarios(),
-      listarRoles()
-    ])
-  } catch (error) {
-    console.error('Error cargando datos:', error)
-  }
-}
-
-onMounted(() => {
-  cargarDatos()
+// Filtros unificados
+const filtros = ref({
+  busqueda: '',
+  tipoOrganizacion: '',
+  organizacionEspecifica: '',
+  estado: '',
+  rol: ''
 })
 
-// Handlers de selección
-const onUserSelected = (user) => {
-  selectedItem.value = user
-  selectedType.value = 'user'
+// Modales
+const mostrarModalUsuario = ref(false)
+const mostrarModalRol = ref(false)
+const mostrarModalEliminar = ref(false)
+
+// Computed
+const usuariosFiltrados = computed(() => {
+  return usuarios.value.filter(usuario => aplicarFiltros(usuario, filtros.value))
+})
+
+// Métodos de filtrado
+const aplicarFiltros = (usuario, filtros) => {
+  // Filtro de búsqueda
+  if (filtros.busqueda) {
+    const termino = filtros.busqueda.toLowerCase()
+    const textoBusqueda = `${usuario.nombre} ${usuario.apellidos} ${usuario.email} ${usuario.localidad}`.toLowerCase()
+    if (!textoBusqueda.includes(termino)) return false
+  }
+
+  // Filtro de organización
+  if (filtros.tipoOrganizacion === 'particular') {
+    if (usuario.organizacion !== 'particular') return false
+  } else if (filtros.tipoOrganizacion === 'organizacion') {
+    if (!filtros.organizacionEspecifica) return false
+    if (usuario.organizacion !== filtros.organizacionEspecifica) return false
+  }
+
+  // Filtro de estado
+  if (filtros.estado === 'verificado' && !usuario.email_verificado) return false
+  if (filtros.estado === 'no-verificado' && usuario.email_verificado) return false
+
+  // Filtro de rol
+  if (filtros.rol) {
+    const tieneRol = usuario.roles.some(rol => rol.id === filtros.rol)
+    if (!tieneRol) return false
+  }
+
+  return true
 }
 
-const onRoleSelected = (role) => {
-  selectedItem.value = role
-  selectedType.value = 'role'
+// Event handlers
+const actualizarFiltros = (nuevosFiltros) => {
+  filtros.value = { ...filtros.value, ...nuevosFiltros }
 }
 
-const clearSelection = () => {
-  selectedItem.value = null
-  selectedType.value = null
+const actualizarBusqueda = (busqueda) => {
+  filtros.value.busqueda = busqueda
 }
 
-// Handlers de formularios
-const showNewUserForm = () => {
-  editingUser.value = null
-  showUserForm.value = true
+const resetearFiltros = () => {
+  filtros.value = {
+    busqueda: '',
+    tipoOrganizacion: '',
+    organizacionEspecifica: '',
+    estado: '',
+    rol: ''
+  }
 }
 
-const showNewRoleForm = () => {
-  editingRole.value = null
-  showRoleForm.value = true
+const seleccionarUsuario = (usuario) => {
+  usuarioSeleccionado.value = usuario
 }
 
-const editUser = (user) => {
-  editingUser.value = user
-  showUserForm.value = true
+const editarUsuario = (usuario) => {
+  usuarioEditando.value = usuario
+  mostrarModalUsuario.value = true
+  usuarioSeleccionado.value = null
 }
 
-const editRole = (role) => {
-  editingRole.value = role
-  showRoleForm.value = true
+const eliminarUsuario = (usuario) => {
+  itemAEliminar.value = usuario
+  mostrarModalEliminar.value = true
 }
 
-const closeUserForm = () => {
-  showUserForm.value = false
-  editingUser.value = null
-}
-
-const closeRoleForm = () => {
-  showRoleForm.value = false
-  editingRole.value = null
-}
-
-// Handlers de guardado
-const onUserSaved = async (userData) => {
-  try {
-    if (editingUser.value) {
-      await actualizarUsuario(editingUser.value.id, userData)
-    } else {
-      await crearUsuario(userData)
+const quitarRol = (usuario, rol) => {
+  // Actualizar usuario quitando el rol
+  const usuarioIndex = usuarios.value.findIndex(u => u.id === usuario.id)
+  if (usuarioIndex !== -1) {
+    const usuarioActualizado = {
+      ...usuarios.value[usuarioIndex],
+      roles: usuarios.value[usuarioIndex].roles.filter(r => r.id !== rol.id)
     }
-    closeUserForm()
-    await cargarDatos() // Recargar datos
-  } catch (error) {
-    console.error('Error guardando usuario:', error)
-  }
-}
-
-const onRoleSaved = async (roleData) => {
-  try {
-    if (editingRole.value) {
-      await actualizarRol(editingRole.value.id, roleData)
-    } else {
-      await crearRol(roleData)
+    usuarios.value[usuarioIndex] = usuarioActualizado
+    
+    // Actualizar usuario seleccionado si es el mismo
+    if (usuarioSeleccionado.value?.id === usuario.id) {
+      usuarioSeleccionado.value = usuarioActualizado
     }
-    closeRoleForm()
-    await cargarDatos() // Recargar datos
-  } catch (error) {
-    console.error('Error guardando rol:', error)
   }
 }
 
-// Handlers de actualización
-const onUserUpdated = async (updatedUser) => {
-  try {
-    await actualizarUsuario(updatedUser.id, updatedUser)
-    await cargarDatos()
-  } catch (error) {
-    console.error('Error actualizando usuario:', error)
+const onRolesActualizados = (usuarioActualizado) => {
+  const index = usuarios.value.findIndex(u => u.id === usuarioActualizado.id)
+  if (index !== -1) {
+    usuarios.value[index] = usuarioActualizado
+  }
+  
+  // Actualizar usuario seleccionado si es el mismo
+  if (usuarioSeleccionado.value?.id === usuarioActualizado.id) {
+    usuarioSeleccionado.value = usuarioActualizado
   }
 }
 
-const onRoleUpdated = async (updatedRole) => {
-  try {
-    await actualizarRol(updatedRole.id, updatedRole)
-    await cargarDatos()
-  } catch (error) {
-    console.error('Error actualizando rol:', error)
-  }
-}
-
-// Handlers de eliminación
-const onUserDeleted = (user) => {
-  itemToDelete.value = user
-  showDeleteModal.value = true
-}
-
-const onRoleDeleted = (role) => {
-  itemToDelete.value = role
-  showDeleteModal.value = true
-}
-
-const confirmDelete = async () => {
-  try {
-    if (selectedType.value === 'user') {
-      await eliminarUsuario(itemToDelete.value.id)
-    } else {
-      await eliminarRol(itemToDelete.value.id)
+const guardarUsuario = (userData) => {
+  if (usuarioEditando.value) {
+    // Actualizar usuario existente
+    const index = usuarios.value.findIndex(u => u.id === usuarioEditando.value.id)
+    if (index !== -1) {
+      const usuarioActualizado = {
+        ...usuarios.value[index],
+        ...userData,
+        updated_at: new Date().toISOString()
+      }
+      usuarios.value[index] = usuarioActualizado
+      
+      // Actualizar usuario seleccionado si es el mismo
+      if (usuarioSeleccionado.value?.id === usuarioActualizado.id) {
+        usuarioSeleccionado.value = usuarioActualizado
+      }
     }
-    clearSelection()
-    await cargarDatos()
-  } catch (error) {
-    console.error('Error eliminando:', error)
-  } finally {
-    showDeleteModal.value = false
-    itemToDelete.value = null
+  } else {
+    // Crear nuevo usuario
+    const nuevoUsuario = {
+      ...userData,
+      id: Date.now().toString(),
+      email_verificado: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    usuarios.value.unshift(nuevoUsuario)
   }
+  cerrarModalUsuario()
 }
 
-const cancelDelete = () => {
-  showDeleteModal.value = false
-  itemToDelete.value = null
+const guardarRol = (rolData) => {
+  if (rolEditando.value) {
+    // Actualizar rol existente
+    const index = roles.value.findIndex(r => r.id === rolEditando.value.id)
+    if (index !== -1) {
+      roles.value[index] = {
+        ...roles.value[index],
+        ...rolData,
+        updated_at: new Date().toISOString()
+      }
+    }
+  } else {
+    // Crear nuevo rol
+    const nuevoRol = {
+      ...rolData,
+      id: Date.now().toString(),
+      usuarios_count: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    roles.value.unshift(nuevoRol)
+  }
+  cerrarModalRol()
 }
+
+const confirmarEliminacion = () => {
+  usuarios.value = usuarios.value.filter(u => u.id !== itemAEliminar.value.id)
+  if (usuarioSeleccionado.value?.id === itemAEliminar.value.id) {
+    usuarioSeleccionado.value = null
+  }
+  mostrarModalEliminar.value = false
+  itemAEliminar.value = null
+}
+
+const cancelarEliminacion = () => {
+  mostrarModalEliminar.value = false
+  itemAEliminar.value = null
+}
+
+const cerrarModalUsuario = () => {
+  mostrarModalUsuario.value = false
+  usuarioEditando.value = null
+}
+
+const cerrarModalRol = () => {
+  mostrarModalRol.value = false
+  rolEditando.value = null
+}
+
+// Inicialización
+onMounted(() => {
+  usuarios.value = mockUsers
+  roles.value = mockRoles
+  organizaciones.value = mockOrganizaciones
+})
 </script>

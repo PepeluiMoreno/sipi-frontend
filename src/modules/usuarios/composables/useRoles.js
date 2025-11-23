@@ -1,4 +1,6 @@
-import { ref, computed } from 'vue'
+// src/modules/usuarios/composables/useRoles.js
+
+import { ref } from 'vue'
 import { useQuery, useMutation } from '@vue/apollo-composable'
 import {
   LISTAR_ROLES,
@@ -8,169 +10,245 @@ import {
   ELIMINAR_ROL
 } from '../graphql/rolQueries'
 
+// ✅ Mocks para desarrollo
+import { mockRoles, simulateNetworkDelay } from '../mocks/usuariosMocks'
+
 export function useRoles() {
   const roles = ref([])
   const rol = ref(null)
   const loading = ref(false)
   const error = ref(null)
-  
-  const pagination = ref({
-    page: 1,
-    pageSize: 20,
-    total: 0,
-    totalPages: 0
-  })
+  const pagination = ref({ page: 1, pageSize: 50, total: 0 })
+  const backendError = ref(false)
 
-  const hasRoles = computed(() => roles.value.length > 0)
+  // ✅ Intentar inicializar mutaciones
+  let crearRolMutation, actualizarRolMutation, eliminarRolMutation
 
-  // Listar roles
-  const { refetch: refetchRoles } = useQuery(LISTAR_ROLES, {
-    filters: {},
-    pagination: { page: 1, pageSize: 50 }
-  }, {
-    fetchPolicy: 'cache-and-network'
-  })
+  try {
+    crearRolMutation = useMutation(CREAR_ROL).mutate
+  } catch (e) {
+    backendError.value = true
+    console.warn('⚠️ Apollo Client no disponible para crearRol')
+  }
 
+  try {
+    actualizarRolMutation = useMutation(ACTUALIZAR_ROL).mutate
+  } catch (e) {
+    backendError.value = true
+    console.warn('⚠️ Apollo Client no disponible para actualizarRol')
+  }
+
+  try {
+    eliminarRolMutation = useMutation(ELIMINAR_ROL).mutate
+  } catch (e) {
+    backendError.value = true
+    console.warn('⚠️ Apollo Client no disponible para eliminarRol')
+  }
+
+  /**
+   * Lista todos los roles
+   */
   const listar = async (filters = {}) => {
     loading.value = true
     error.value = null
-
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para listar roles')
+      try {
+        await simulateNetworkDelay()
+        roles.value = mockRoles
+        pagination.value.total = mockRoles.length
+        return { items: roles.value, total: pagination.value.total }
+      } catch (err) {
+        error.value = `Error al cargar roles: ${err.message}`
+        throw err
+      } finally {
+        loading.value = false
+      }
+    }
+    
     try {
-      const { data } = await refetchRoles({
-        filters,
+      const { data, error: queryError } = await useQuery(LISTAR_ROLES, {
         pagination: {
-          page: filters.page || 1,
-          pageSize: filters.pageSize || 20
+          page: pagination.value.page,
+          pageSize: pagination.value.pageSize
         }
       })
-
-      const response = data?.roles
+      if (queryError) throw queryError
+      const response = data.value?.roles
       roles.value = response?.items || []
-      pagination.value = {
-        page: response?.page || 1,
-        pageSize: response?.pageSize || 20,
-        total: response?.total || 0,
-        totalPages: response?.totalPages || 0
-      }
-
-      return { items: roles.value, pagination: pagination.value }
+      pagination.value.total = response?.total || 0
+      return { items: roles.value, total: pagination.value.total }
     } catch (err) {
       error.value = `Error al cargar roles: ${err.message}`
-      console.error('Error en listar roles:', err)
+      console.error('Error en listar Roles:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  // Obtener rol por ID
-  const { refetch: refetchRol } = useQuery(OBTENER_ROL, { id: '' })
-
+  /**
+   * Obtiene un rol por ID
+   */
   const obtener = async (id) => {
     loading.value = true
     error.value = null
-
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para obtener rol')
+      await simulateNetworkDelay()
+      
+      const found = mockRoles.find(r => r.id === id)
+      if (!found) {
+        error.value = 'Rol no encontrado'
+        throw new Error('Rol no encontrado')
+      }
+      
+      rol.value = found
+      return found
+    }
+    
     try {
-      const { data } = await refetchRol({ id })
-      rol.value = data?.rol?.item || null
+      const { data, error: queryError } = await useQuery(OBTENER_ROL, { id })
+      if (queryError) throw queryError
+      rol.value = data.value?.rol?.item || null
       return rol.value
     } catch (err) {
       error.value = `Error al obtener rol: ${err.message}`
-      console.error('Error en obtener rol:', err)
+      console.error('Error en obtener Rol:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  // Mutations
-  const { mutate: crearMutation } = useMutation(CREAR_ROL)
-  const { mutate: actualizarMutation } = useMutation(ACTUALIZAR_ROL)
-  const { mutate: eliminarMutation } = useMutation(ELIMINAR_ROL)
-
+  /**
+   * Crea un nuevo rol
+   */
   const crear = async (inputData) => {
     loading.value = true
     error.value = null
-
-    try {
-      const { data } = await crearMutation({ input: inputData })
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para crear rol')
+      await simulateNetworkDelay()
       
-      if (data?.crearRol?.success) {
-        const nuevoRol = data.crearRol.item
-        roles.value.unshift(nuevoRol)
-        pagination.value.total++
-        return nuevoRol
-      } else {
-        throw new Error(data?.crearRol?.message || 'Error al crear rol')
+      const nuevo = {
+        ...inputData,
+        id: Date.now().toString(),
+        usuarios_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
+      
+      roles.value.unshift(nuevo)
+      pagination.value.total++
+      return nuevo
+    }
+    
+    try {
+      const { data, errors } = await crearRolMutation({ input: inputData })
+      if (errors) throw new Error(errors[0].message)
+      const nuevo = data.crearRol.item
+      roles.value.unshift(nuevo)
+      pagination.value.total++
+      return nuevo
     } catch (err) {
       error.value = `Error al crear rol: ${err.message}`
+      console.error('Error en crear Rol:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
+  /**
+   * Actualiza un rol existente
+   */
   const actualizar = async (id, inputData) => {
     loading.value = true
     error.value = null
-
-    try {
-      const { data } = await actualizarMutation({ id, input: inputData })
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para actualizar rol')
+      await simulateNetworkDelay()
       
-      if (data?.actualizarRol?.success) {
-        const rolActualizado = data.actualizarRol.item
-        
-        // Actualizar en la lista
-        const index = roles.value.findIndex(r => r.id === id)
-        if (index !== -1) {
-          roles.value[index] = { ...roles.value[index], ...rolActualizado }
-        }
-        
-        // Actualizar rol actual si es el mismo
-        if (rol.value?.id === id) {
-          rol.value = { ...rol.value, ...rolActualizado }
-        }
-        
-        return rolActualizado
-      } else {
-        throw new Error(data?.actualizarRol?.message || 'Error al actualizar rol')
+      const index = roles.value.findIndex(r => r.id === id)
+      if (index === -1) {
+        error.value = 'Rol no encontrado'
+        throw new Error('Rol no encontrado')
       }
+      
+      const actualizado = {
+        ...roles.value[index],
+        ...inputData,
+        id,
+        updated_at: new Date().toISOString()
+      }
+      
+      roles.value[index] = actualizado
+      return actualizado
+    }
+    
+    try {
+      const { data, errors } = await actualizarRolMutation({ id, input: inputData })
+      if (errors) throw new Error(errors[0].message)
+      const actualizado = data.actualizarRol.item
+      const index = roles.value.findIndex(r => r.id === id)
+      if (index !== -1) roles.value[index] = actualizado
+      return actualizado
     } catch (err) {
       error.value = `Error al actualizar rol: ${err.message}`
+      console.error('Error en actualizar Rol:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
+  /**
+   * Elimina un rol
+   */
   const eliminar = async (id) => {
     loading.value = true
     error.value = null
-
-    try {
-      const { data } = await eliminarMutation({ id })
+    
+    if (backendError.value || import.meta.env.DEV) {
+      console.log('🔄 Usando mocks para eliminar rol')
+      await simulateNetworkDelay()
       
-      if (data?.eliminarRol?.success) {
-        roles.value = roles.value.filter(r => r.id !== id)
-        pagination.value.total--
-        
-        if (rol.value?.id === id) {
-          rol.value = null
-        }
-        
-        return true
-      } else {
-        throw new Error(data?.eliminarRol?.message || 'Error al eliminar rol')
-      }
+      roles.value = roles.value.filter(r => r.id !== id)
+      pagination.value.total--
+      return true
+    }
+    
+    try {
+      const { data, errors } = await eliminarRolMutation({ id })
+      if (errors) throw new Error(errors[0].message)
+      roles.value = roles.value.filter(r => r.id !== id)
+      pagination.value.total--
+      return data.eliminarRol.success
     } catch (err) {
       error.value = `Error al eliminar rol: ${err.message}`
+      console.error('Error en eliminar Rol:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
+  /**
+   * Cambia de página en la paginación
+   */
+  const cambiarPagina = (page) => {
+    pagination.value.page = page
+    return listar()
+  }
+
+  /**
+   * Resetea el estado del composable
+   */
   const reset = () => {
     roles.value = []
     rol.value = null
@@ -179,22 +257,18 @@ export function useRoles() {
   }
 
   return {
-    // State
     roles,
     rol,
     loading,
     error,
+    backendError,
     pagination,
-    
-    // Computed
-    hasRoles,
-    
-    // Methods
     listar,
     obtener,
     crear,
     actualizar,
     eliminar,
+    cambiarPagina,
     reset
   }
 }

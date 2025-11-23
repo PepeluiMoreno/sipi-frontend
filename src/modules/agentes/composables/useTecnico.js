@@ -19,7 +19,7 @@ export function useTecnico() {
     loading.value = true
     error.value = null
     try {
-      const { data, error: queryError } = await useQuery(LISTAR_TECNICOS, {
+      const { result, error: queryError, onResult } = useQuery(LISTAR_TECNICOS, {
         filters: {
           search: filters.search,
           rolTecnicoId: filters.rolTecnicoId,
@@ -32,10 +32,19 @@ export function useTecnico() {
           pageSize: filters.pageSize || 50
         }
       })
-      if (queryError) throw queryError
-      const response = data.value?.tecnicos
-      tecnicos.value = response?.items || []
-      pagination.value.total = response?.total || 0
+
+      await new Promise((resolve) => {
+        const stop = onResult(({ data }) => {
+          const response = data?.tecnicos
+          tecnicos.value = response?.items || []
+          pagination.value.total = response?.total || 0
+          stop()
+          resolve()
+        })
+      })
+
+      if (queryError.value) throw queryError.value
+
       return { items: tecnicos.value, total: pagination.value.total }
     } catch (err) {
       error.value = `Error al cargar técnicos: ${err.message}`
@@ -50,9 +59,18 @@ export function useTecnico() {
     loading.value = true
     error.value = null
     try {
-      const { data, error: queryError } = await useQuery(OBTENER_TECNICO, { id })
-      if (queryError) throw queryError
-      tecnico.value = data.value?.tecnico?.item || null
+      const { result, error: queryError, onResult } = useQuery(OBTENER_TECNICO, { id })
+
+      await new Promise((resolve) => {
+        const stop = onResult(({ data }) => {
+          tecnico.value = data?.tecnico?.item || null
+          stop()
+          resolve()
+        })
+      })
+
+      if (queryError.value) throw queryError.value
+
       return tecnico.value
     } catch (err) {
       error.value = `Error al obtener técnico: ${err.message}`
