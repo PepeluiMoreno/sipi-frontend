@@ -13,9 +13,6 @@ import AdministracionesView from '../../agentes/views/AdministracionesView.vue'
 import NotariasView from '../../agentes/views/NotariasView.vue'
 import RegistrosPropiedadView from '../../agentes/views/RegistrosPropiedadView.vue'
 
-// Importar vistas de Inmuebles
-import InmuebleTratamiento from '../../inmuebles/views/InmuebleTratamiento.vue'
-
 // Importar vistas de Documentos
 import Documentos from '../../documentos/views/Documentos.vue'
 
@@ -25,6 +22,9 @@ import ConfigUsuarios from '../../usuarios/views/ConfigUsuarios.vue'
 
 // Importar vistas de Auth
 import VerificarEmail from '../../usuarios/views/VerificarEmail.vue'
+
+// Importar vistas de Inmueble
+import InmuebleIndex from '../../inmuebles/views/InmuebleIndex.vue'
 
 // DESCOMENTAR CUANDO ESTÉN IMPLEMENTADOS:
 // import Transmisiones from '../../transmisiones/views/Transmisiones.vue'
@@ -82,9 +82,9 @@ const routes = [
       },
       // INMUEBLES
       {
-        path: '/inmueble-tratamiento',
-        name: 'InmuebleTratamiento',
-        component: InmuebleTratamiento
+        path: '/inmueble-index',
+        name: 'InmuebleIndex',
+        component: InmuebleIndex
       },
       // DOCUMENTOS
       {

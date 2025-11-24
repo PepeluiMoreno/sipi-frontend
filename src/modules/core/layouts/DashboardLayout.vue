@@ -22,7 +22,7 @@
 
           <!-- Inmuebles -->
           <router-link
-            to="/inmueble-tratamiento"
+            to="/inmueble-index"
             class="flex items-center px-4 py-3 rounded-lg transition-colors group"
             :class="[
               $route.path.includes('/inmueble')
